@@ -5,29 +5,46 @@
  */
 import { registerBlockType } from '@wordpress/blocks';
 
-/**
- * Lets webpack process CSS, SASS or SCSS files referenced in JavaScript files.
- * All files containing `style` keyword are bundled together. The code used
- * gets applied both to the front of your site and to the editor.
- *
- * @see https://www.npmjs.com/package/@wordpress/scripts#using-css
- */
-import './style.scss';
+import { useState, useEffect } from '@wordpress/element';
+import { SelectControl } from '@wordpress/components';
 
-/**
- * Internal dependencies
- */
-import Edit from './edit';
-import metadata from './block.json';
+// Define your block in a JavaScript file
+registerBlockType('create-block/custom-users-block', {
+    title: 'Custom Users Block',
+    category: 'common',
+    attributes: {
+        selectedOption: {type: 'int'}, // Define an attribute to save the selected option
+    },
+    edit: function(props) {
+        const {attributes, setAttributes} = props;
+		const [emails, setEmails] = useState([]);
 
-/**
- * Every block starts by registering a new block type definition.
- *
- * @see https://developer.wordpress.org/block-editor/reference-guides/block-api/block-registration/
- */
-registerBlockType( metadata.name, {
-	/**
-	 * @see ./edit.js
-	 */
-	edit: Edit,
-} );
+		useEffect(() => {
+			wp.ajax.post('get_users_details', {}).done(function (response) {
+				console.log(response);
+				setEmails(response);
+			});
+		}, []);
+
+        // Render the select box with options
+        return (
+			<SelectControl
+				label="Email"
+				options={emails}
+				value={attributes.selectedOption}
+				onChange={(value) => setAttributes({selectedOption: value})}
+			/>
+        );
+    },
+    save: function(props) {
+        const {attributes} = props;
+
+        // Render the selected option
+        return (
+            <div>
+                <p>Selected option: {attributes.selectedOption}</p>
+            </div>
+        );
+    },
+});
+
