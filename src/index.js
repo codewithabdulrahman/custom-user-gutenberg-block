@@ -3,48 +3,69 @@
  *
  * @see https://developer.wordpress.org/block-editor/reference-guides/block-api/block-registration/
  */
-import { registerBlockType } from '@wordpress/blocks';
 
+import axios from 'axios';
 import { useState, useEffect } from '@wordpress/element';
-import { SelectControl } from '@wordpress/components';
+import { SelectControl, Button } from '@wordpress/components';
+import { registerBlockType, getBlockType } from '@wordpress/blocks';
 
 // Define your block in a JavaScript file
 registerBlockType('create-block/custom-users-block', {
     title: 'Custom Users Block',
     category: 'common',
     attributes: {
-        selectedOption: {type: 'int'}, // Define an attribute to save the selected option
+        selectedUserId: { type: 'int' },
+        selectedUserName: { type: 'text' },
+        selectedUserEmail: { type: 'text' },
+        selectedUserImage: { type: 'text' },
     },
-    edit: function(props) {
-        const {attributes, setAttributes} = props;
-		const [emails, setEmails] = useState([]);
+    edit: function (props) {
+        const { attributes, setAttributes } = props;
+        const [emails, setEmails] = useState([]);
 
-		useEffect(() => {
-			wp.ajax.post('get_users_details', {}).done(function (response) {
-				console.log(response);
-				setEmails(response);
-			});
-		}, []);
+        useEffect(() => {
+            axios.get(cusBaseUrl.baseUrl + 'cub-get-users/v1/users')
+                .then(response => {
+                    if(response.data[0]['value'])
+                        loadUserDetails(response.data[0]['value'])
+                    setEmails(response.data)
+                })
+                .catch(error => console.error(error));
+        }, []);
+
+        const loadUserDetails = (user_id) => {
+            axios.get(cusBaseUrl.baseUrl + 'cub-get-users/v1/user/' + user_id)
+                .then(response => {
+                    setAttributes({ selectedUserId: response.data.ID })
+                    setAttributes({ selectedUserName: response.data.display_name })
+                    setAttributes({ selectedUserEmail: response.data.user_email })
+                    setAttributes({ selectedUserImage: response.data.avatar })
+                })
+                .catch(error => console.error(error));
+        }
 
         // Render the select box with options
         return (
-			<SelectControl
-				label="Email"
-				options={emails}
-				value={attributes.selectedOption}
-				onChange={(value) => setAttributes({selectedOption: value})}
-			/>
+            <SelectControl
+                label="Email"
+                options={emails}
+                value={attributes.selectedUserId}
+                onChange={(value) => loadUserDetails(value)}
+            />
         );
     },
-    save: function(props) {
-        const {attributes} = props;
+    save: function (props) {
+        const { attributes } = props;
 
         // Render the selected option
         return (
-            <div>
-                <p>Selected option: {attributes.selectedOption}</p>
+            <div class={'user-wrapper-' + attributes.selectedUserId}>
+                <img src={attributes.selectedUserImage} alt={attributes.selectedUserName} />
+                <div>{attributes.selectedUserName}</div>
+                <div>{attributes.selectedUserEmail}</div>
+                <div id={'biography-' + attributes.selectedUserId}></div>
+                <button class="getBioGraphy" data-id={attributes.selectedUserId}>load user’s biograph</button>
             </div>
         );
     },
 });
-
